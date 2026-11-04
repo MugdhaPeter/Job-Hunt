@@ -1,0 +1,958 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>My Job Hunt</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* Layout: app shell — status bar with the pipeline, tabbed views (Matches to approve, Applications, Profile), a job panel with the tailored CV on paper */
+:root{
+  --bg:#eef1f2; --panel:#ffffff; --ink:#14232a; --muted:#56666d; --line:#d4dcdf;
+  --accent:#c9761a; --accent-ink:#ffffff; --teal:#1d5b66; --paper:#fffdf8; --paper-ink:#1b1b1b;
+  --good:#2f7a4a; --warn:#b5701a; --bad:#a63d3d; --chip:#e3eaec;
+  --f-display:"Archivo",system-ui,sans-serif; --f-body:"Archivo",system-ui,sans-serif;
+  --f-cv:"Source Serif 4",Georgia,serif; --f-mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1719; --panel:#162226; --ink:#e3eced; --muted:#93a5aa; --line:#2a3a3f;
+  --accent:#e8963a; --accent-ink:#1a1206; --teal:#7cc3cf; --paper:#f4f0e6; --paper-ink:#1b1b1b;
+  --good:#6cc28c; --warn:#e3a554; --bad:#e07c7c; --chip:#22333a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1719; --panel:#162226; --ink:#e3eced; --muted:#93a5aa; --line:#2a3a3f;
+  --accent:#e8963a; --accent-ink:#1a1206; --teal:#7cc3cf; --paper:#f4f0e6; --paper-ink:#1b1b1b;
+  --good:#6cc28c; --warn:#e3a554; --bad:#e07c7c; --chip:#22333a; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-block:18px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(22px,4vw,30px);letter-spacing:-.02em;margin:0}
+.sub{color:var(--muted);margin:0;font-size:13.5px}
+.hdr-actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:600 14px var(--f-body);padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.good{background:var(--good);color:#fff;border-color:var(--good)}
+.btn.small{font-size:13px;padding:6px 11px}
+.btn.ghost{background:transparent}
+.pipeline{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px}
+@media (max-width:620px){.pipeline{grid-template-columns:repeat(3,minmax(0,1fr))}.pipeline .stage:nth-child(n+4){display:none}}
+.stage{background:var(--panel);padding:10px 14px;border:0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.stage:hover{background:var(--chip)}.stage.on{box-shadow:inset 0 -3px 0 var(--accent)}
+.receipt{border:1px solid var(--good);border-radius:10px;padding:14px 16px;margin-bottom:16px}
+.receipt h4{margin:0 0 8px;font-size:16px;color:var(--good)}
+.receipt dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 14px;margin:0;font-size:14px}
+.receipt dt{color:var(--muted)}.receipt dd{margin:0;overflow-wrap:anywhere}
+.qa{margin:6px 0 0;padding-left:18px}.qa li{margin-bottom:3px}
+.stage b{display:block;font:600 24px var(--f-mono);font-variant-numeric:tabular-nums}
+.stage span{font:600 11px var(--f-mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.stage.hot b{color:var(--accent)}
+.banner{background:var(--chip);border-radius:10px;padding:10px 14px;font-size:14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;justify-content:space-between}
+.banner[data-kind="err"]{color:var(--bad)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
+.tabs button{font:600 14px var(--f-body);background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs .n{font:600 11px var(--f-mono);background:var(--chip);border-radius:999px;padding:1px 7px;margin-left:5px}
+.grid{display:grid;grid-template-columns:minmax(0,400px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+.search{position:relative;margin-bottom:10px}
+.search input{width:100%;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 38px 10px 36px;box-sizing:border-box;font-size:15px}
+.search input::-webkit-search-cancel-button{display:none}
+.search .ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;display:flex}
+.search .clr{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:6px 8px;cursor:pointer;border-radius:6px}
+.search .clr:hover{color:var(--ink);background:var(--chip)}
+.shint{font-size:13px;color:var(--muted);margin:-4px 0 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.shint button{font:600 12.5px var(--f-body);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:3px 10px;cursor:pointer}
+mark{background:color-mix(in srgb,var(--accent) 30%,transparent);color:inherit;border-radius:2px;padding:0 1px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.toolbar .sub{font-size:13px}
+.list{display:flex;flex-direction:column;gap:8px}
+.job{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer}
+.job:hover{border-color:var(--teal)}
+.job[aria-current="true"]{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.jrow{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px}
+.score{font:600 17px var(--f-mono);display:grid;place-items:center;height:46px;border-radius:8px;background:var(--chip);font-variant-numeric:tabular-nums}
+.score.hi{color:var(--good)}.score.mid{color:var(--warn)}.score.lo{color:var(--bad)}
+.job h3{margin:0;font-size:15px;font-weight:700;line-height:1.3}
+.meta{color:var(--muted);font-size:13px}
+.jbtns{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.pill{display:inline-block;font:600 11px var(--f-mono);text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:4px;margin-top:5px;background:var(--chip);color:var(--muted)}
+.s-approved{color:var(--teal)}.s-applying{color:var(--warn)}.s-applied{color:var(--teal)}.s-interview,.s-offer{color:var(--good)}.s-rejected,.s-skipped{color:var(--bad)}.s-review{color:var(--accent)}
+.needs{font-size:13px;color:var(--warn);margin-top:6px}
+.detail{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0}
+.detail h2{font-family:var(--f-display);font-size:23px;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.facts{display:flex;flex-wrap:wrap;gap:4px 14px;color:var(--muted);font-size:14px;margin:6px 0 14px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:16px}
+select,textarea,input[type=text]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;box-sizing:border-box}
+.lbl{font:600 11px var(--f-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:6px}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px}
+@media (max-width:620px){.cols{grid-template-columns:minmax(0,1fr)}}
+.cols ul{margin:0;padding-left:18px}.cols li{margin-bottom:4px}
+.note{background:var(--chip);border-radius:8px;padding:10px 12px;font-size:14px;margin-bottom:14px}
+textarea{width:100%;min-height:64px;resize:vertical}
+.saved{font:12px var(--f-mono);color:var(--muted)}
+.cvhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin:20px 0 10px}
+.cvhead h4{margin:0;font-size:16px}
+.paperwrap{background:var(--bg);border-radius:10px;padding:14px;overflow-x:auto}
+.paper{background:var(--paper);color:var(--paper-ink);font-family:var(--f-cv);font-size:13.5px;line-height:1.45;max-width:780px;margin:0 auto;padding:28px 30px;box-shadow:0 1px 2px rgba(0,0,0,.12),0 6px 18px rgba(0,0,0,.06)}
+.paper h5{font-family:var(--f-cv);font-size:22px;margin:0;font-weight:600}
+.paper .cvsub{font-size:12.5px;margin:2px 0 0}
+.paper .sec{font:600 11.5px var(--f-body);text-transform:uppercase;letter-spacing:.12em;border-bottom:1px solid #b9b2a2;padding-bottom:2px;margin:16px 0 6px;color:#3b3b3b}
+.paper ul{margin:4px 0;padding-left:18px}.paper li{margin-bottom:3px}
+.paper .role{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;font-weight:600;margin-top:8px}
+.paper .role span:last-child{font-weight:400;font-size:12.5px}
+.paper p{margin:4px 0}
+.empty{padding:26px;text-align:center;color:var(--muted);background:var(--panel);border:1px dashed var(--line);border-radius:12px}
+.profile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;max-width:760px;display:grid;gap:14px}
+.profile input[type=text],.profile textarea{width:100%}
+.prow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:620px){.prow{grid-template-columns:minmax(0,1fr)}}
+[hidden]{display:none!important}
+.addbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;max-width:760px;display:grid;gap:12px}
+.addbox input[type=url]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;box-sizing:border-box}
+.addbox textarea{min-height:56px}
+.addrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.linklist{max-width:760px;margin-top:18px;display:flex;flex-direction:column;gap:8px}
+.linkitem{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center}
+.linkitem .u{font:12.5px var(--f-mono);color:var(--muted);overflow-wrap:anywhere}
+.linkitem h3{margin:0;font-size:15px}
+.ease0{color:var(--good)}.ease2{color:var(--warn)}
+.sortl{display:inline-flex;align-items:center}
+.tips{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:14px}
+.tips summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.tips summary::-webkit-details-marker{display:none}
+.tips ul{margin:8px 0 4px;padding-left:20px}.tips li{margin-bottom:4px}
+.tailor{border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:10px;padding:10px 14px;margin-bottom:12px;background:var(--bg)}
+.tailor summary{cursor:pointer;font-weight:700;list-style:none;display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;align-items:center}
+.tailor summary::-webkit-details-marker{display:none}
+.tailor textarea{background:var(--panel);min-height:110px}
+.ask{border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:20px;background:var(--bg)}
+.ask textarea{background:var(--panel)}
+.answer{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-top:10px;white-space:pre-wrap;font-size:14.5px}
+.answer .q{font-weight:700;margin-bottom:6px;white-space:normal}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);padding:20px;max-width:440px;width:calc(100% - 32px)}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.chips button{font:600 13px var(--f-body);border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 11px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.s-requested{color:var(--accent)}
+.how{font-size:14px;color:var(--muted);max-width:760px;margin-top:18px}
+.how ol{padding-left:20px}.how li{margin-bottom:6px}
+.how b{color:var(--ink)}
+.job:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sr{position:absolute;left:-9999px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="app-title">My Job Hunt</h1>
+      <p class="sub">Approve the matches you like, then tap <b>Apply to approved now</b>. Nothing is applied for until you tap it. New matches arrive Mon, Wed and Fri at 7:41.</p>
+    </div>
+    <div class="hdr-actions">
+      <button class="btn" id="export-xlsx">Export to Excel</button>
+      <button class="btn" id="run-search">Find new jobs now</button>
+      <button class="btn primary" id="run-apply">Apply to approved now</button>
+    </div>
+  </header>
+
+  <div class="pipeline" id="pipeline"></div>
+  <div class="banner" id="banner" hidden></div>
+  <details class="tips" id="tips">
+    <summary><span>💡 Save your Claude credits</span><span class="meta" id="tips-hint">tap to open</span></summary>
+    <ul>
+      <li><b>Start a new chat</b> for new requests. Long chats cost more per message because Claude re-reads everything.</li>
+      <li><b>Searches run Mon, Wed, Fri</b> at 7:41. No need to tap <b>Find new jobs now</b> in between: each tap is a full run.</li>
+      <li><b>Apply to approved now</b> is cheaper than a search; use it when you've approved jobs.</li>
+      <li><b>Let free job alerts find jobs</b> (LinkedIn, Indeed, company sites) and paste good ones into <b>Apply by link</b>.</li>
+      <li><b>Apply to "No sign-in" jobs yourself</b> with the Download PDF buttons, then tap <b>I've applied</b>. Zero credits.</li>
+      <li><b>Write cover letters and answers only when you'll use them.</b> Each tap of those buttons uses a little.</li>
+      <li><b>Batch your asks</b> into one message instead of several.</li>
+    </ul>
+  </details>
+  <dialog id="skip-dlg">
+    <form method="dialog" id="skip-form">
+      <h3 style="margin:0 0 4px;font-size:18px">Why skip this job?</h3>
+      <p class="sub" id="skip-job" style="margin:0"></p>
+      <div class="chips" id="skip-chips"></div>
+      <label class="lbl" for="skip-text">Anything else (optional)</label>
+      <textarea id="skip-text" placeholder="e.g. too far, wrong seniority"></textarea>
+      <div class="row" style="justify-content:flex-end"><button class="btn" value="cancel" type="submit" id="skip-cancel">Cancel</button><button class="btn primary" value="ok" type="submit" id="skip-ok">Skip job</button></div>
+    </form>
+  </dialog>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" id="tab-matches" data-tab="matches" aria-selected="true">Matches</button>
+    <button role="tab" id="tab-apps" data-tab="apps" aria-selected="false">In progress</button>
+    <button role="tab" id="tab-done" data-tab="done" aria-selected="false">Applied</button>
+    <button role="tab" id="tab-archive" data-tab="archive" aria-selected="false">Skipped & rejected</button>
+    <button role="tab" id="tab-add" data-tab="add" aria-selected="false">Apply by link</button>
+    <button role="tab" id="tab-profile" data-tab="profile" aria-selected="false">Profile & answers</button>
+  </nav>
+
+  <section id="view-jobs" class="grid">
+    <div>
+      <div class="search" role="search">
+        <span class="ico" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+        <label class="sr" for="q">Search jobs</label>
+        <input type="search" id="q" placeholder="Search keyword, company or role…" autocomplete="off" spellcheck="false">
+        <button type="button" class="clr" id="q-clear" aria-label="Clear search" hidden>×</button>
+      </div>
+      <div class="shint" id="q-hint" hidden></div>
+      <div class="toolbar" id="toolbar"></div>
+      <div class="list" id="list"><div class="empty">Loading your jobs…</div></div>
+    </div>
+    <div class="detail" id="detail" aria-live="polite"><p class="sub">Pick a job to see the fit and its tailored CV.</p></div>
+  </section>
+
+  <section id="view-add" hidden>
+    <form class="addbox" id="add-form" novalidate>
+      <div><label class="lbl" for="add-url">Job link</label>
+      <input type="url" id="add-url" placeholder="Paste the job's link, e.g. https://careers.company.com/job/123" autocomplete="off" required></div>
+      <div><label class="lbl" for="add-cvtype">Which CV to use</label>
+      <select id="add-cvtype"><option value="cyber" id="opt-main">Main CV</option><option value="support" id="opt-alt">Second CV</option></select></div>
+      <div><label class="lbl" for="add-note">Anything Claude should know (optional)</label>
+      <textarea id="add-note" placeholder="e.g. a referral name, or which team you're interested in"></textarea></div>
+      <div class="addrow"><button class="btn primary" type="submit" id="add-go">Add link</button><button class="btn" type="button" id="check-links" hidden>Check my links now</button><span class="saved" id="add-status"></span></div>
+      <p class="sub" style="margin:0">Add your links, then tap <b>Check my links now</b> once: Claude opens them all in one run, checks each job is still open and tailors your CV. Nothing is sent until you tap <b>Apply to approved now</b>. You'll get a receipt for each application, or a note here if one needs you.</p>
+    </form>
+    <div class="linklist" id="linklist"></div>
+  </section>
+
+  <section id="view-profile" hidden>
+    <form class="profile" id="profile-form">
+      <div class="prow">
+        <div><label class="lbl" for="p-salary">Salary expectation</label><input type="text" id="p-salary"></div>
+        <div><label class="lbl" for="p-start">Start date / notice</label><input type="text" id="p-start"></div>
+      </div>
+      <div><label class="lbl" for="p-rtw">Right to work & sponsorship</label><textarea id="p-rtw"></textarea></div>
+      <div><label class="lbl" for="p-location">Location & travel</label><input type="text" id="p-location"></div>
+      <div class="prow">
+        <div><label class="lbl" for="p-gender">Gender</label><input type="text" id="p-gender"></div>
+        <div><label class="lbl" for="p-eth">Ethnicity</label><input type="text" id="p-eth"></div>
+      </div>
+      <div class="prow">
+        <div><label class="lbl" for="p-rel">Religion</label><input type="text" id="p-rel"></div>
+        <div><label class="lbl" for="p-other">Other diversity questions</label><input type="text" id="p-other"></div>
+      </div>
+      <div class="prow">
+        <div><label class="lbl" for="p-cap">Most applications per day</label><input type="text" id="p-cap" inputmode="numeric"></div>
+        <div><label class="lbl" for="p-auto">Auto-approve (off: you apply with the button)</label><input type="text" id="p-auto" inputmode="numeric" placeholder="Off" disabled></div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn primary" type="submit" id="p-save">Save answers</button><span class="saved" id="p-status"></span></div>
+    </form>
+    <div class="profile" style="margin-top:18px">
+      <div class="cvhead" style="margin:0"><h4>Customer support CV (non-technical roles)</h4><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" id="dl-sup" type="button">Download PDF</button><button class="btn small" id="copy-sup" type="button">Copy text</button></div></div>
+      <p class="sub" style="margin:0">For customer support, live chat, phone and ticketing roles. In <b>Apply by link</b>, choose "Customer support CV" and Claude uses this one.</p>
+      <div class="paperwrap"><div class="paper" id="sup-cv"></div></div>
+    </div>
+    <div class="how">
+      <b>How this works</b>
+      <ol>
+        <li>Every Monday, Wednesday and Friday at 7:41, Claude searches for new roles that match your profile (you set the search in the scheduled task), skips ones that don't fit, and adds the best matches here with a tailored CV.</li>
+        <li>You tap <b>Approve</b> on the ones you want.</li>
+        <li>When you tap <b>Apply to approved now</b>, Claude applies to approved jobs on the employer's own careers site, using these answers and the tailored CV. It never uses LinkedIn bots, never applies twice, and stays under your daily limit.</li>
+        <li>If a site needs a sign-in, a new account or a CAPTCHA, the job moves to <b>Needs you</b> with a note. Sign in once and approve it again.</li>
+        <li>Found a job yourself? Paste its link in <b>Apply by link</b>. Claude checks it's open, tailors your CV and applies, with a receipt when it's sent.</li>
+      </ol>
+      Applying needs your computer awake with the Claude desktop app open and the scheduled task set to "Require this computer".
+    </div>
+  </section>
+</div>
+
+<script>
+const TRIGGER_ID="trig_YOUR_TRIGGER_ID"; // the id of your scheduled task (see README)
+const STATUSES=[["requested","Link added"],["review","New match"],["approved","Approved"],["applying","Needs you"],["applied","Applied"],["interview","Interview"],["offer","Offer"],["rejected","Rejected"],["skipped","Skipped"]];
+const SLABEL=Object.fromEntries(STATUSES);
+const APP_STATES=["requested","approved","applying"];
+const DONE_STATES=["applied","interview","offer"];
+const ARCHIVE_STATES=["skipped","rejected"];
+function endedAt(j){return j.rejectedAt||j.skippedAt||""}
+function shortDate(s){if(!s)return "";const d=new Date(s);return isNaN(d)?String(s):d.toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}
+function reasonOf(j){
+  if(j.status==="rejected")return j.rejectReason||"Rejected by the employer";
+  if(j.skipReason)return j.skipReason;
+  if(/^closed/i.test(String(j.caution||"")))return j.caution;
+  return j.caution||"Skipped";
+}
+
+/* ======================================================================
+   YOUR PROFILE: edit everything in this block to make the app yours.
+   This example uses a fictional person. Only put facts that are true
+   about you here: every CV, cover letter and answer is built from them.
+   ====================================================================== */
+const PROFILE={
+  appTitle:"My Job Hunt",
+  status:"Lives in London. Full right to work in the UK. Available to start in one month.",
+  visaLine:"Answer right-to-work and sponsorship questions from the status line above.",
+  mainCvLabel:"Security CV",          // CV used for most roles
+  altCvLabel:"Customer support CV"    // second CV for a different kind of role
+};
+const CV={
+  name:"Alex Morgan",
+  contact:"London, UK | +44 7000 000000 | alex.morgan@example.com | linkedin.com/in/example",
+  rtw:"Full right to work in the UK",
+  skills:["SIEM & Detection Engineering","MITRE ATT&CK","Threat Intelligence & IOC Analysis","Incident Response","Vulnerability Assessment","Cloud Security Monitoring (AWS, Azure)","Stakeholder Communication"],
+  tech:[["Tools","Splunk, Microsoft Sentinel, KQL, ELK Stack, Nessus, Wireshark, Burp Suite, Nmap"],["Operating systems","Windows, Linux"],["Cloud","AWS, Microsoft Azure & Microsoft 365"]],
+  achievements:["Example achievement: an award, publication, open-source contribution or recognition, with a date.","Example achievement: something measurable you are proud of."],
+  roles:{
+    job1:{title:"Security Analyst",org:"Example Security Ltd, London",dates:"Jan 2022 – Present",b:{
+      a_detect:"Built and maintained 40+ SIEM detection rules, improving coverage of priority threats.",
+      a_triage:"Triaged and investigated security alerts as part of a 24/7 SOC team, escalating confirmed incidents.",
+      a_mitre:"Mapped detections to MITRE ATT&CK to show coverage gaps and plan new content.",
+      a_tune:"Tuned noisy detections, reducing false positives by 25%.",
+      a_ir:"Supported incident response from containment to post-incident review.",
+      a_cloud:"Monitored AWS and Azure environments and onboarded new log sources.",
+      a_clients:"Worked with internal teams and clients to resolve 150+ security tickets."}},
+    job2:{title:"IT Support Analyst",org:"Example Services plc, Manchester",dates:"Jun 2019 – Dec 2021",b:{
+      b_support:"Resolved 1,000+ IT support tickets across hardware, software and access requests.",
+      b_vuln:"Ran monthly vulnerability scans and tracked remediation with system owners.",
+      b_docs:"Wrote knowledge-base articles that cut repeat tickets by 15%.",
+      b_train:"Delivered security awareness sessions to 200+ staff."}}
+  },
+  uk:"Optional: other work experience, summarised in one or two sentences.",
+  education:[["BSc Computer Science, Example University","2016 – 2019","Relevant modules: Networks, Security, Databases"]],
+  certs:["Example certification 1","Example certification 2"],
+  projects:["Example project: what you built or researched, and the result."],
+  volunteering:"Optional: volunteering you have done.",
+  languages:"English (fluent)"
+};
+
+/* Second CV for a different kind of role (used when a job's tailor.type is "support"). */
+const SUP={
+  headline:"Customer Support Specialist – Phone, Chat & Ticketing",
+  contact:"London, UK | +44 7000 000000 | alex.morgan@example.com",
+  rtw:"Full right to work in the UK",
+  summary:"Example summary for your second CV: two or three sentences on the experience and strengths that matter for this kind of role.",
+  skills:[["Ticketing & case management","example evidence from your experience"],["Written communication","example evidence"],["Problem solving","example evidence"],["Multi-tasking","example evidence"],["IT skills","Microsoft Office, Windows, CRM systems"]],
+  roles:[
+    {title:"IT Support Analyst",org:"Example Services plc, Manchester",dates:"Jun 2019 – Dec 2021",b:["Resolved 1,000+ support tickets by phone, email and chat.","Wrote knowledge-base articles that cut repeat tickets by 15%."]},
+    {title:"Customer Assistant",org:"Example Retail, Manchester",dates:"2017 – 2019",b:["Helped customers in a busy store and resolved complaints calmly.","Handled payments and stock accurately."]}
+  ],
+  education:"BSc Computer Science, Example University (2016 – 2019)",
+  extra:"Languages: English (fluent) | Availability: one month's notice | References: On request"
+};
+function fileName(){return CV.name.replace(/[^A-Za-z0-9]+/g,"_")}
+function isSup(t){return !!(t&&t.type==="support")}
+function supRoles(t){const rw=(t&&t.rewrite)||{};return SUP.roles.map((r,ri)=>({...r,b:r.b.map((x,bi)=>rw["p"+ri+"_"+bi]||x)}))}
+function supModel(t){t=t||{};const sk=Array.isArray(t.skills)&&t.skills.length&&Array.isArray(t.skills[0])?t.skills:SUP.skills;return {headline:t.headline||SUP.headline,summary:t.summary||SUP.summary,skills:sk,roles:supRoles(t)}}
+function supHTML(t){const m=supModel(t);
+  return `<h5>${esc(CV.name)}</h5><p class="cvsub">${esc(m.headline)}</p><p class="cvsub">${esc(SUP.contact)}<br>${esc(SUP.rtw)}</p>
+  <div class="sec">Profile</div><p>${esc(m.summary)}</p>
+  <div class="sec">Key skills</div><ul>${m.skills.map(([a,b])=>`<li><b>${esc(a)}:</b> ${esc(b)}</li>`).join("")}</ul>
+  <div class="sec">Experience</div>${m.roles.map(r=>`<div class="role"><span>${esc(r.title)} | ${esc(r.org)}</span><span>${esc(r.dates)}</span></div><ul>${r.b.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`).join("")}
+  <div class="sec">Education</div><p>${esc(SUP.education)}</p>
+  <div class="sec">Additional information</div><p>${esc(SUP.extra)}</p>`}
+function supText(t){const m=supModel(t);const L=[CV.name.toUpperCase(),m.headline,SUP.contact,SUP.rtw,"","PROFILE",m.summary,"","KEY SKILLS",...m.skills.map(([a,b])=>`• ${a}: ${b}`),"","EXPERIENCE"];
+  m.roles.forEach(r=>L.push(`${r.title} | ${r.org}${r.dates?" | "+r.dates:""}`,...r.b.map(x=>"• "+x),""));
+  L.push("EDUCATION",SUP.education,"","ADDITIONAL INFORMATION",SUP.extra);return L.join("\n")}
+function supPDF(t){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:"pt",format:"a4"});
+  const m=supModel(t);const W=595,M=42,CW=W-2*M;let y=46;
+  const clean=s=>String(s).replace(/[–—]/g,"-").replace(/[•·]/g,"-").replace(/[’]/g,"'").replace(/[“”]/g,'"');
+  const need=h=>{if(y+h>810){doc.addPage();y=46}};
+  const para=(s,size=9.5,style="normal")=>{doc.setFont("helvetica",style);doc.setFontSize(size);doc.splitTextToSize(clean(s),CW).forEach(l=>{need(size*1.3);doc.text(l,M,y);y+=size*1.3})};
+  const bullet=(s,lead)=>{doc.setFont("helvetica","normal");doc.setFontSize(9.3);const txt=clean((lead?lead+": ":"")+s);const lines=doc.splitTextToSize(txt,CW-20);lines.forEach((l,i)=>{need(11.8);if(i===0)doc.text("-",M+2,y);if(i===0&&lead){const lb=clean(lead+":");doc.setFont("helvetica","bold");doc.text(lb,M+12,y);const w=doc.getTextWidth(lb+" ");doc.setFont("helvetica","normal");doc.text(l.slice(lb.length+1),M+12+w,y)}else{doc.setFont("helvetica","normal");doc.text(l,M+12,y)}y+=11.8})};
+  const sec=s=>{y+=6;need(20);doc.setFont("helvetica","bold");doc.setFontSize(9);doc.setTextColor(18,53,91);doc.text(s.toUpperCase(),M,y);y+=4;doc.setDrawColor(18,53,91);doc.line(M,y,W-M,y);y+=11;doc.setTextColor(26,26,26)};
+  const row=(a,b)=>{doc.setFont("helvetica","bold");doc.setFontSize(9.6);const w=b?doc.getTextWidth(clean(b))+12:0;const lines=doc.splitTextToSize(clean(a),CW-w);need(lines.length*12.5);lines.forEach((l,i)=>{doc.text(l,M,y);if(i===0&&b){doc.setFont("helvetica","normal");doc.text(clean(b),W-M,y,{align:"right"});doc.setFont("helvetica","bold")}y+=12.5})};
+  doc.setTextColor(18,53,91);doc.setFont("helvetica","bold");doc.setFontSize(19);doc.text(CV.name,M,y);y+=16;doc.setTextColor(26,26,26);
+  para(m.headline,10.5,"bold");para(SUP.contact+" | "+SUP.rtw,9);
+  sec("Profile");para(m.summary);
+  sec("Key skills");m.skills.forEach(([a,b])=>bullet(b,a));
+  sec("Experience");m.roles.forEach(r=>{row(`${r.title} - ${r.org}`,r.dates);r.b.forEach(x=>bullet(x));y+=3});
+  sec("Education");para(SUP.education);
+  sec("Additional information");para(SUP.extra);
+  return doc.output("blob");
+}
+function supFacts(){
+  return `NAME: ${CV.name}\nPROFILE: ${SUP.summary}\nSKILLS: ${SUP.skills.map(([a,b])=>a+": "+b).join("; ")}\nEXPERIENCE:\n${SUP.roles.map(r=>`${r.title}, ${r.org}${r.dates?" ("+r.dates+")":""}:\n- ${r.b.join("\n- ")}`).join("\n")}\nEDUCATION: ${SUP.education}\n${SUP.extra}\nLOCATION & STATUS: ${PROFILE.status}`;
+}
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+function cvModel(t){
+  t=t||{};
+  const skills=(t.skills&&t.skills.length?t.skills:CV.skills);
+  const rw=t.rewrite||{};
+  const roles=Object.keys(CV.roles).map(k=>{const r=CV.roles[k];let order=((t.bullets&&t.bullets[k])||Object.keys(r.b)).filter(x=>r.b[x]);if(!order.length)order=Object.keys(r.b);return {...r,list:order.map(x=>rw[x]||r.b[x])}});
+  return {headline:t.headline||"Cybersecurity Professional",summary:t.summary||"",skills,roles};
+}
+
+function cvHTML(t){
+  if(isSup(t))return supHTML(t);
+  const m=cvModel(t);
+  return `<h5>${esc(CV.name)}</h5>
+  <p class="cvsub">${esc(m.headline)}</p>
+  <p class="cvsub">${esc(CV.contact)}<br>${esc(CV.rtw)}</p>
+  <div class="sec">Profile</div><p>${esc(m.summary)}</p>
+  <div class="sec">Core skills</div><p>${m.skills.map(esc).join(" · ")}</p>
+  <div class="sec">Key achievements</div><ul>${CV.achievements.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>
+  <div class="sec">Technical skills</div><ul>${CV.tech.map(([a,b])=>`<li><b>${esc(a)}:</b> ${esc(b)}</li>`).join("")}</ul>
+  <div class="sec">Professional experience</div>
+  ${m.roles.map(r=>`<div class="role"><span>${esc(r.title)} | ${esc(r.org)}</span><span>${esc(r.dates)}</span></div><ul>${r.list.map(b=>`<li>${esc(b)}</li>`).join("")}</ul>`).join("")}
+  <div class="sec">Additional UK experience</div><p>${esc(CV.uk)}</p>
+  <div class="sec">Education</div>${CV.education.map(([a,d,x])=>`<div class="role"><span>${esc(a)}</span><span>${esc(d)}</span></div>${x?`<p>${esc(x)}</p>`:""}`).join("")}
+  <div class="sec">Certifications</div><ul>${CV.certs.map(c=>`<li>${esc(c)}</li>`).join("")}</ul>
+  <div class="sec">Projects</div><ul>${CV.projects.map(c=>`<li>${esc(c)}</li>`).join("")}</ul>
+  <div class="sec">Volunteering</div><p>${esc(CV.volunteering)}</p>
+  <div class="sec">Languages</div><p>${esc(CV.languages)}</p>`;
+}
+
+function cvText(t){
+  if(isSup(t))return supText(t);
+  const m=cvModel(t);const L=[];
+  L.push(CV.name.toUpperCase(),m.headline,CV.contact,CV.rtw,"","PROFILE",m.summary,"","CORE SKILLS",m.skills.join(" • "),"","KEY ACHIEVEMENTS",...CV.achievements.map(a=>"• "+a),"","TECHNICAL SKILLS",...CV.tech.map(([a,b])=>`• ${a}: ${b}`),"","PROFESSIONAL EXPERIENCE");
+  m.roles.forEach(r=>L.push(`${r.title} | ${r.org} | ${r.dates}`,...r.list.map(b=>"• "+b),""));
+  L.push("ADDITIONAL UK EXPERIENCE",CV.uk,"","EDUCATION",...CV.education.flatMap(([a,d,x])=>[a+(d?" | "+d:""),...(x?[x]:[])]),"","CERTIFICATIONS",...CV.certs.map(c=>"• "+c),"","PROJECTS",...CV.projects.map(c=>"• "+c),"","VOLUNTEERING",CV.volunteering,"","LANGUAGES",CV.languages);
+  return L.join("\n");
+}
+
+function cvPDF(t){
+  if(isSup(t))return supPDF(t);
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:"pt",format:"a4"});
+  const m=cvModel(t);const W=595,M=46,CW=W-2*M;let y=52;
+  const clean=s=>String(s).replace(/[–—]/g,"-").replace(/[•·]/g,"-").replace(/[’]/g,"'").replace(/[“”]/g,'"');
+  const need=h=>{if(y+h>800){doc.addPage();y=52}};
+  const para=(s,size=9.5,style="normal",indent=0)=>{doc.setFont("times",style);doc.setFontSize(size);const lines=doc.splitTextToSize(clean(s),CW-indent);lines.forEach(l=>{need(size*1.3);doc.text(l,M+indent,y);y+=size*1.3})};
+  const bullet=s=>{doc.setFont("times","normal");doc.setFontSize(9.5);const lines=doc.splitTextToSize(clean(s),CW-12);lines.forEach((l,i)=>{need(12.4);if(i===0)doc.text("-",M+2,y);doc.text(l,M+12,y);y+=12.4})};
+  const sec=s=>{y+=7;need(22);doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.text(s.toUpperCase(),M,y);y+=4;doc.setDrawColor(170);doc.line(M,y,W-M,y);y+=12};
+  const row=(a,b)=>{doc.setFont("times","bold");doc.setFontSize(10);const w=b?doc.getTextWidth(clean(b))+10:0;const lines=doc.splitTextToSize(clean(a),CW-w);need(lines.length*13);lines.forEach((l,i)=>{doc.text(l,M,y);if(i===0&&b){doc.setFont("times","normal");doc.text(clean(b),W-M,y,{align:"right"});doc.setFont("times","bold")}y+=13})};
+  doc.setFont("times","bold");doc.setFontSize(20);doc.text(CV.name,M,y);y+=17;
+  para(m.headline,11);para(CV.contact,9);para(CV.rtw,9);
+  sec("Profile");para(m.summary);
+  sec("Core skills");para(m.skills.join("  |  "));
+  sec("Key achievements");CV.achievements.forEach(bullet);
+  sec("Technical skills");CV.tech.forEach(([a,b])=>bullet(a+": "+b));
+  sec("Professional experience");m.roles.forEach(r=>{row(`${r.title} | ${r.org}`,r.dates);r.list.forEach(bullet);y+=4});
+  sec("Additional UK experience");para(CV.uk);
+  sec("Education");CV.education.forEach(([a,d,x])=>{row(a,d);if(x)para(x,9.5)});
+  sec("Certifications");CV.certs.forEach(bullet);
+  sec("Projects");CV.projects.forEach(bullet);
+  sec("Volunteering");para(CV.volunteering);
+  sec("Languages");para(CV.languages);
+  return doc.output("blob");
+}
+
+function fmtWhen(t){const d=new Date(t);return isNaN(d)?String(t||""):d.toLocaleString("en-GB",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}
+function answersHTML(a){
+  if(!a)return "";
+  if(Array.isArray(a))return `<ul class="qa">${a.map(x=>typeof x==="object"?`<li><b>${esc(x.q||x.question||"")}</b> ${esc(x.a??x.answer??"")}</li>`:`<li>${esc(x)}</li>`).join("")}</ul>`;
+  if(typeof a==="object")return `<ul class="qa">${Object.entries(a).map(([q,v])=>`<li><b>${esc(q)}:</b> ${esc(v)}</li>`).join("")}</ul>`;
+  return `<ul class="qa">${String(a).split(/;\s*/).filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
+}
+function cvSentOther(j){const r=j.receipt||{};const c=String(r.cvFile||r.cvHeadline||"");return /indeed|stored|linkedin/i.test(c)}
+function cvLabel(j){if(j.status==="applied"||j.appliedAt){return cvSentOther(j)?"Tailored CV (not used: your saved CV on the job site was sent)":"CV sent with this application"}return "Tailored CV"}
+function receiptHTML(j){
+  const r=j.receipt;
+  if(!r&&!j.appliedAt){return j.status==="applied"?`<div class="note"><b>Marked applied</b>, but there's no submission receipt for this job. If you submitted it yourself, add the date in your notes.</div>`:""}
+  r||{};const R=r||{};
+  return `<div class="receipt"><h4>✓ Application receipt</h4><dl>
+    <dt>Submitted</dt><dd>${esc(fmtWhen(R.submittedAt||j.appliedAt))}</dd>
+    <dt>Site</dt><dd>${esc(R.site||j.applyNote||"")}</dd>
+    ${R.reference?`<dt>Reference</dt><dd>${esc(R.reference)}</dd>`:""}
+    ${R.confirmationText?`<dt>Confirmation</dt><dd>${esc(R.confirmationText)}</dd>`:""}
+    <dt>CV sent</dt><dd>${esc(R.cvFile||R.cvHeadline||"Tailored CV shown below")}</dd>
+    ${R.self?`<dt>Cover letter</dt><dd>${hasCover(j)?"Shown below (if you used it)":"None in the app"}</dd>`:R.coverNote||(hasCover(j)&&R.coverSent)?`<dt>Cover letter</dt><dd>${esc(R.coverNote?"Sent (see below)":"Sent (see below)")}</dd>`:`<dt>Cover letter</dt><dd>Not sent</dd>`}
+    <dt>Answers sent</dt><dd>${R.answers?answersHTML(R.answers):R.self?"You filled these in yourself. Add anything worth remembering in your notes.":"Not recorded"}</dd>
+  </dl></div>`;
+}
+function hasCover(j){return Array.isArray(j.cover)&&j.cover.length>0}
+function coverHTML(j){
+  return `<h5>${esc(CV.name)}</h5><p class="cvsub">${esc(CV.contact)}</p>
+  <div class="sec">${esc(j.title)} – ${esc(j.company)}</div>${j.cover.map(p=>`<p style="margin:0 0 10px">${esc(p)}</p>`).join("")}`;
+}
+function coverPDF(j){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:"pt",format:"a4"});
+  const W=595,M=60,CW=W-2*M;let y=60;
+  const clean=s=>String(s).replace(/[–—]/g,"-").replace(/[’]/g,"'").replace(/[“”]/g,'"');
+  doc.setFont("times","bold");doc.setFontSize(16);doc.text(CV.name,M,y);y+=15;
+  doc.setFont("times","normal");doc.setFontSize(9.5);doc.text(clean(CV.contact),M,y);y+=26;
+  doc.setFont("helvetica","bold");doc.setFontSize(9);doc.splitTextToSize(clean((j.title+" - "+j.company).toUpperCase()),CW).forEach(l=>{doc.text(l,M,y);y+=12});y+=8;
+  doc.setFont("times","normal");doc.setFontSize(11);
+  j.cover.forEach(p=>{doc.splitTextToSize(clean(p),CW).forEach(l=>{if(y>790){doc.addPage();y=60}doc.text(l,M,y);y+=15});y+=9});
+  return doc.output("blob");
+}
+
+function cvFacts(j){
+  if(j&&isSup(j.tailor))return supFacts();
+  const r=Object.values(CV.roles).map(x=>`${x.title}, ${x.org} (${x.dates}):\n- ${Object.values(x.b).join("\n- ")}`).join("\n\n");
+  return `NAME: ${CV.name}\n${r}\n\nACHIEVEMENTS:\n- ${CV.achievements.join("\n- ")}\n\nTOOLS & SKILLS: ${CV.tech.map(([a,b])=>a+": "+b).join("; ")}; ${CV.skills.join(", ")}\n\nEDUCATION: ${CV.education.map(e=>e[0]+(e[1]?" ("+e[1]+")":"")+(e[2]?" "+e[2]:"")).join("; ")}\nCERTIFICATIONS: ${CV.certs.join("; ")}\nPROJECTS: ${CV.projects.join(" | ")}\nUK EXPERIENCE: ${CV.uk}\nLANGUAGES: ${CV.languages}\nLOCATION & STATUS: ${PROFILE.status}`;
+}
+function jobFacts(j){
+  return `ROLE: ${j.title}\nCOMPANY: ${j.company}\nLOCATION: ${j.location||""}\nSALARY: ${j.salary||"not stated"}\nJOB LINK: ${j.url||""}\nWHAT THE ROLE NEEDS / WHY SHE FITS: ${(j.why||[]).join("; ")}\nGAPS (do NOT claim these): ${(j.gaps||[]).join("; ")}\nNOTES: ${[j.caution,j.notes].filter(Boolean).join(" ")}\nKEY SKILLS FOR THIS ROLE: ${((j.tailor||{}).skills||[]).join(", ")}`;
+}
+const STYLE_RULES=`Tone: confident, direct, warm and natural, like a real person wrote it. British English. Never use these words: delve, testament, landscape, pivotal, seamless, foster, leverage, passionate, synergy. No clichés like "I am excited to apply". ACCURACY: use ONLY facts, numbers, tools and experience from the CV below. Never invent experience, employers, tools, metrics or certifications. If the role needs something she lacks (listed under GAPS), do not claim it.`;
+/* ---------- Expert CV tailoring (runs only when the user taps the button) ---------- */
+function cvSource(j){
+  const sup=isSup(j.tailor);
+  if(sup)return {sup,ids:SUP.roles.flatMap((r,ri)=>r.b.map((x,bi)=>["p"+ri+"_"+bi,`${r.title}, ${r.org}`,x]))};
+  return {sup,ids:Object.entries(CV.roles).flatMap(([k,r])=>Object.entries(r.b).map(([id,x])=>[id,`${r.title}, ${r.org} (${k})`,x]))};
+}
+const NUMRE=/\d+(?:[.,]\d+)?\s*(?:%|\+)?/g;
+function nums(x){return (String(x).match(NUMRE)||[]).map(n=>n.replace(/\s/g,"").replace(/[+%]$/,""))}
+function factNums(j){const set=new Set(nums(cvFacts(j)+" "+CV.contact+" "+CV.education.flat().join(" ")));["5","4","2","3","1"].forEach(n=>set.add(n));return set}
+function safeText(x,allowed){return nums(x).every(n=>allowed.has(n))}
+let tlCtl=null,tlOpenId=null;
+async function tailorCV(j){
+  if(!sample)return;const st=$("tl-status"),btn=$("tl-go");
+  const jd=($("tl-jd")?.value||"").trim();
+  if(jd!==(j.jd||""))await save(j.id,{jd});
+  tlOpenId=j.id;tlCtl?.abort();tlCtl=new AbortController();btn.disabled=true;st.textContent="Tailoring your CV… this can take up to a minute.";
+  const src=cvSource(j),allowed=factNums(j);
+  const bulletList=src.ids.map(([id,where,x])=>`[${id}] (${where}) ${x}`).join("\n");
+  const prompt=`You are a senior UK recruiter and expert CV writer who knows exactly how applicant tracking systems (ATS) and hiring managers screen CVs. Tailor ${CV.name}'s CV to the job below so that both the ATS and the hiring manager see the candidate as the person they described in the job description, someone who can clearly do this job from day one.
+
+THE JOB
+${jobFacts(j)}
+${jd?`\nFULL JOB DESCRIPTION (pasted by her; this is the main source for keywords and priorities):\n${jd.slice(0,12000)}`:"\n(No full job description was pasted, so use the role title, company and the fit notes above.)"}
+
+HOW TO TAILOR
+1. First, silently work out the 5-6 things this employer most wants (the job title, must-have skills, tools, responsibilities and outcomes), using their exact wording.
+2. HEADLINE: the employer's exact job title, then " | " and 2-3 of their top requirements the candidate genuinely has. Under 95 characters.
+3. PROFILE SUMMARY (60-90 words, 3-4 sentences, no "I", no clichés): sentence 1 presents the candidate as exactly the professional this role asks for, using the job title and their key phrases; sentences 2-3 prove it with the strongest matching achievements and real numbers; the last sentence states the value the candidate will bring to this team and their availability. It must read like the answer to their job description.
+4. SKILLS: ${src.sup?"8-10 pairs [skill name, short evidence from the CV], skill names using the job description's exact terms":"8-10 short skill phrases"} the candidate genuinely has, using the job description's exact terms (ATS keyword match), most important first.
+5. EXPERIENCE BULLETS: rewrite EVERY bullet below so it speaks the employer's language. Start with a strong past-tense action verb, put the part most relevant to this job first, use their terminology where it truthfully describes what the candidate did (for example "client tickets" can become "customer cases" for a support role), and end with the result or impact. Each bullet under 32 words. Keep every number exactly as written and keep each bullet's facts; do not add tools, employers, responsibilities, metrics, certifications or experience that are not in it.
+${src.sup?"":`6. ORDER: list the bullet ids for each role, most relevant to this job first. ${Object.entries(CV.roles).map(([k,r])=>`"${k}" = ${r.title}, ${r.org}`).join("; ")}. You may leave out at most 2 clearly irrelevant bullets per role.`}
+
+HONESTY RULES (strict): use ONLY facts from the CV. Never invent or inflate. If the job needs something listed under GAPS, do not claim it; emphasise the closest real, transferable experience instead. British English. Never use: delve, testament, landscape, pivotal, seamless, foster, leverage, passionate, synergy, dynamic, results-driven, go-getter.
+
+EXPERIENCE BULLETS (id, role, original text):
+${bulletList}
+
+FULL CV FACTS:
+${cvFacts(j)}
+
+Reply with ONLY a JSON object, no code fences, in this shape:
+{"headline":"...","summary":"...","skills":${src.sup?'[["Skill","evidence"], ...]':'["...", ...]'},"rewrite":{"<bullet id>":"rewritten bullet", ...}${src.sup?"":',"bullets":${JSON.stringify(Object.fromEntries(Object.entries(CV.roles).map(([k,r])=>[k,[Object.keys(r.b)[0]+",..."]])))}'}}`;
+  try{
+    let n=0;
+    const {text}=await sample(prompt,{signal:tlCtl.signal,cache:false,onText:()=>{n++;if(n%20===0)st.textContent="Tailoring your CV… writing";}});
+    const m=String(text).replace(/^\s*```(?:json)?/i,"").replace(/```\s*$/,"");
+    const o=JSON.parse(m.slice(m.indexOf("{"),m.lastIndexOf("}")+1));
+    const valid=new Set(src.ids.map(x=>x[0]));const orig=Object.fromEntries(src.ids.map(([id,,x])=>[id,x]));
+    const rewrite={};let dropped=0;
+    Object.entries(o.rewrite||{}).forEach(([id,x])=>{if(!valid.has(id)||typeof x!=="string"||!x.trim())return;
+      const okNums=nums(x).every(nn=>nums(orig[id]).includes(nn)||allowed.has(nn));if(okNums)rewrite[id]=x.trim();else dropped++});
+    const old=j.tailor||{};const next={...old,rewrite,tailoredAt:new Date().toISOString(),tailoredWithJD:!!jd};
+    if(typeof o.headline==="string"&&o.headline.trim())next.headline=o.headline.trim().slice(0,120);
+    if(typeof o.summary==="string"&&o.summary.trim()){if(safeText(o.summary,allowed))next.summary=o.summary.trim();else dropped++}
+    if(Array.isArray(o.skills)&&o.skills.length){
+      if(src.sup){const sk=o.skills.filter(x=>Array.isArray(x)&&x.length===2&&x.every(y=>typeof y==="string")).slice(0,10);if(sk.length>=5)next.skills=sk}
+      else{const sk=o.skills.filter(x=>typeof x==="string"&&x.trim()).map(x=>x.trim()).slice(0,10);if(sk.length>=5)next.skills=sk}}
+    if(!src.sup&&o.bullets){const b={};Object.keys(CV.roles).forEach(k=>{const ids=Object.keys(CV.roles[k].b);let l=(o.bullets[k]||[]).filter((x,i,a)=>ids.includes(x)&&a.indexOf(x)===i);if(l.length<ids.length-2)l=[...l,...ids.filter(x=>!l.includes(x))].slice(0,Math.max(l.length,ids.length-2));b[k]=l.length?l:ids});next.bullets=b}
+    const ok=await save(j.id,{tailor:next,tailorPrev:old});
+    st.textContent=ok?`CV tailored to this role${jd?" from the job description":""}.${dropped?` ${dropped} line${dropped>1?"s":""} kept as before because the new wording changed a number.`:""}`:"Tailored, but couldn't save. Try again.";
+    renderDetail();const s2=$("tl-status");if(s2)s2.textContent=st.textContent;
+  }catch(e){
+    const s2=$("tl-status")||st;
+    s2.textContent=e.code==="cancelled"?"":e.code==="not_granted"||e.code==="sampling_disabled"?"Claude isn't allowed to write here. Allow it in the artifact's permissions to use this.":e.code==="rate_limited"?"You've hit a usage limit. Try again later.":e instanceof SyntaxError?"Claude's reply couldn't be read. Try again.":"Couldn't tailor it just now. Try again.";
+  }finally{const b=$("tl-go");if(b)b.disabled=false}
+}
+async function undoTailor(j){if(!j.tailorPrev)return;const ok=await save(j.id,{tailor:j.tailorPrev,tailorPrev:{"__delete__":true}});if(ok){delete j.tailorPrev;renderDetail()}}
+
+let clCtl=null;
+async function writeCover(j){
+  if(!sample)return;const st=$("cl-status"),btn=$("gen-cl");
+  clCtl?.abort();clCtl=new AbortController();btn.disabled=true;st.textContent="Writing… this can take up to a minute.";
+  const prompt=`You are an expert executive career coach and professional copywriter. Write a compelling, tailored, human-sounding cover letter for ${CV.name} for the role below.
+
+Rules:
+- Exactly 3 paragraphs, under 350 words in total. No greeting, no sign-off, no headings, no placeholders.
+- Paragraph 1: a strong hook showing genuine knowledge of ${j.company} or its mission (what it does, who it serves, and why this role matters there). No generic openings.
+- Paragraphs 2-3: connect 2-3 of the candidate's specific achievements, with their real metrics, directly to what this role needs. Focus on the value the candidate will deliver to their problems, not what she wants.
+- Weave in the role's hard skills and key terms naturally for ATS.
+- End with a confident, specific closing sentence (state availability from the CV facts).
+- ${STYLE_RULES}
+
+Reply with ONLY the 3 paragraphs separated by one blank line.
+
+${jobFacts(j)}
+
+HER CV:
+${cvFacts(j)}`;
+  try{
+    const wrap=$("cl-wrap");let paper;
+    const {text}=await sample(prompt,{signal:clCtl.signal,cache:false,onText:({text})=>{if(!paper){wrap.innerHTML=`<div class="paperwrap"><div class="paper" id="cl-live" style="white-space:pre-wrap"></div></div>`;paper=$("cl-live")}paper.textContent=text;st.textContent="Writing…"}});
+    const paras=text.split(/\n\s*\n/).map(x=>x.trim()).filter(Boolean);
+    const ok=await save(j.id,{cover:paras,coverAt:new Date().toISOString()});
+    st.textContent=ok?"Saved to this job.":"Written, but couldn't save. Copy it before leaving.";
+    renderDetail();const s2=$("cl-status");if(s2)s2.textContent=ok?"Saved to this job.":"";
+  }catch(e){
+    st.textContent=e.code==="cancelled"?"":e.code==="not_granted"||e.code==="sampling_disabled"?"Claude isn't allowed to write here. Allow it in the artifact's permissions to use this.":e.code==="rate_limited"?"You've hit a usage limit. Try again later.":"Couldn't write it just now. Try again.";
+  }finally{const b=$("gen-cl");if(b)b.disabled=false}
+}
+let askCtl=null;
+async function askQuestion(j){
+  if(!sample)return;const q=$("ask-q").value.trim(),st=$("ask-status"),out=$("ask-out"),go=$("ask-go"),stop=$("ask-stop");
+  if(!q){st.textContent="Type or paste a question first.";return}
+  askCtl?.abort();askCtl=new AbortController();go.disabled=true;stop.hidden=false;stop.onclick=()=>askCtl.abort();
+  out.innerHTML=`<div class="answer"><div class="q">${esc(q)}</div><span id="ask-a">Thinking…</span></div>`;st.textContent="";
+  const prompt=`You are an expert career coach helping ${CV.name} answer a question on a job application form, written in their own voice (first person).
+
+Question: "${q}"
+
+Rules:
+- Answer exactly what is asked, tailored to this role and company. If the question states a word or character limit, stay under it; otherwise aim for 120-200 words. For yes/no or factual questions (right to work, notice period, salary, location), answer briefly and truthfully from her details below.
+- Use a specific example from the CV with real numbers where it helps. Show the value they bring to this team.
+- If the candidate lacks something the question asks about, be honest: point to the closest real experience and their ability to learn, never pretend.
+- Plain prose, no headings or bullet points unless the question asks for a list, no sign-off.
+- Visa or sponsorship questions: ${PROFILE.visaLine}
+- ${STYLE_RULES}
+
+Reply with ONLY the answer text.
+
+${jobFacts(j)}
+
+HER CV:
+${cvFacts(j)}`;
+  try{
+    const {text}=await sample(prompt,{signal:askCtl.signal,cache:false,onText:({text})=>{const a=$("ask-a");if(a)a.textContent=text}});
+    const qa=[{q,a:text.trim(),at:new Date().toISOString()},...(j.qa||[])].slice(0,20);
+    const ok=await save(j.id,{qa});
+    if(ok){renderDetail();const s2=$("ask-status");if(s2)s2.textContent="Answer saved below."}
+    else{out.innerHTML=`<div class="answer"><div class="q">${esc(q)}</div>${esc(text.trim())}<div class="row"><button class="btn small" id="ask-copy">Copy</button></div></div>`;
+    $("ask-copy").onclick=async e=>{try{await navigator.clipboard.writeText(text.trim());e.currentTarget.textContent="Copied"}catch(_){}};}
+  }catch(e){
+    const a=$("ask-a");if(a)a.textContent=e.text||"";
+    st.textContent=e.code==="cancelled"?"Stopped.":e.code==="not_granted"||e.code==="sampling_disabled"?"Claude isn't allowed to answer here. Allow it in the artifact's permissions.":e.code==="rate_limited"?"You've hit a usage limit. Try again later.":"Couldn't answer just now. Try again.";
+  }finally{const g=$("ask-go");if(g)g.disabled=false;const sp=$("ask-stop");if(sp)sp.hidden=true}
+}
+const SKIP_REASONS=["Not relevant to my skills","Needs security clearance","No visa sponsorship","Location / commute","Too senior","Too junior","Salary too low","Already applied elsewhere"];
+let skipId=null,skipPicked=new Set();
+function openSkip(id){
+  const j=jobs.find(x=>x.id===id);if(!j)return;skipId=id;skipPicked=new Set();
+  $("skip-job").textContent=`${j.title} · ${j.company}`;$("skip-text").value="";
+  $("skip-chips").innerHTML=SKIP_REASONS.map(r=>`<button type="button" aria-pressed="false" data-reason="${esc(r)}">${esc(r)}</button>`).join("");
+  const d=$("skip-dlg");if(d.showModal)d.showModal();else{const r=prompt("Why skip this job?");if(r!==null){save(id,{status:"skipped",skipReason:r.trim()||"No reason given"});renderAll()}}
+}
+function initExtras(){
+$("skip-chips").addEventListener("click",e=>{const b=e.target.closest("[data-reason]");if(!b)return;const r=b.dataset.reason;if(skipPicked.has(r)){skipPicked.delete(r);b.setAttribute("aria-pressed","false")}else{skipPicked.add(r);b.setAttribute("aria-pressed","true")}});
+$("skip-dlg").addEventListener("close",()=>{
+  if($("skip-dlg").returnValue!=="ok"||!skipId)return;
+  const reason=[...skipPicked,$("skip-text").value.trim()].filter(Boolean).join("; ")||"No reason given";
+  save(skipId,{status:"skipped",skipReason:reason,skippedAt:new Date().toISOString()});skipId=null;renderAll();
+});
+try{const t=localStorage.getItem("tipsOpen");if(t===null||t==="1")$("tips").open=t==="1"}catch(_){}
+$("tips").addEventListener("toggle",()=>{$("tips-hint").textContent=$("tips").open?"tap to hide":"tap to open";try{localStorage.setItem("tipsOpen",$("tips").open?"1":"0")}catch(_){}});
+}
+
+let sample=null;
+let jobs=[],answers=null,lastRun=null,sel=null,tab="matches",db=null,mcp=null,downloads=null,canWrite=true;
+const $=id=>document.getElementById(id);
+function scoreClass(n){return n>=82?"hi":n>=72?"mid":"lo"}
+try{tab=localStorage.getItem("tab")||"matches";sel=localStorage.getItem("sel")}catch(_){}
+
+function banner(msg,kind){const b=$("banner");if(!msg){b.hidden=true;return}b.hidden=false;b.dataset.kind=kind||"";b.innerHTML=msg}
+
+function renderPipeline(){
+  const c=s=>jobs.filter(j=>(j.status||"review")===s).length;
+  const st=[["review","To approve",c("review")],["approved","Approved",c("approved")],["applying","Needs you",c("applying")],["applied","Applied",c("applied")],["interview","Interviews",c("interview")+c("offer")]];
+  $("pipeline").innerHTML=st.map(([k,l,n])=>`<button type="button" class="stage ${(k==="review"||k==="applying")&&n?"hot":""} ${stageFilter===k&&(tab==="apps"||tab==="done")?"on":""}" data-stage="${k}"><b>${n}</b><span>${esc(l)}</span></button>`).join("");
+  const nm=c("review"),na=jobs.filter(j=>APP_STATES.includes(j.status)).length;
+  $("tab-matches").innerHTML=`Matches${nm?`<span class="n">${nm}</span>`:""}`;
+  $("tab-apps").innerHTML=`In progress${na?`<span class="n">${na}</span>`:""}`;
+  const nd=jobs.filter(j=>DONE_STATES.includes(j.status)).length;$("tab-done").innerHTML=`Applied${nd?`<span class="n">${nd}</span>`:""}`;
+  const nl=jobs.filter(j=>j.status==="requested").length;$("tab-add").innerHTML=`Apply by link${nl?`<span class="n">${nl}</span>`:""}`;
+  const nx=jobs.filter(j=>ARCHIVE_STATES.includes(j.status)).length;$("tab-archive").innerHTML=`Skipped & rejected${nx?`<span class="n">${nx}</span>`:""}`;
+  $("export-xlsx").disabled=!jobs.length;
+  $("run-apply").disabled=!c("approved")||!mcp;
+  $("run-search").disabled=!mcp;
+  if(lastRun&&lastRun.at&&$("banner").hidden)banner(`<span><b>Last run:</b> ${esc(new Date(lastRun.at).toLocaleString("en-GB",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}))}. ${esc(lastRun.summary||"")}</span>`);
+}
+
+const EASY=/greenhouse\.io|lever\.co|ashbyhq\.com|workable\.com|smartrecruiters\.com|pinpointhq\.com|gohire\.io|teamtailor\.com|recruitee\.com/i;
+const SIGNIN=/myworkdayjobs\.com|taleo\.net|trac\.jobs|successfactors|icims\.com|careers\.microsoft\.com|oraclecloud\.com/i;
+function ease(j){if(j.easyApply===true)return 0;if(j.easyApply===false)return 2;const u=String(j.url||"");return EASY.test(u)?0:SIGNIN.test(u)?2:1}
+const EASE_LABEL=["No sign-in","Check site","Sign-in needed"];
+const MON={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function pdate(t){const m=/(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{4})/i.exec(t||"");return m?new Date(+m[3],MON[m[2].toLowerCase()],+m[1]).getTime():null}
+function deadline(j){const t=String(j.seen||"")+" "+String(j.caution||"");
+  const c=/clos\w*\s+(?:on\s+)?([^.;,]*\d{4})/i.exec(t);if(c){const d=pdate(c[1]);if(d)return d}
+  const p=pdate(j.seen);return p?p+28*864e5:Infinity}
+let sortBy="relevance";try{sortBy=localStorage.getItem("sortBy")||"relevance"}catch(_){}
+function cmp(a,b){
+  if(sortBy==="urgency")return deadline(a)-deadline(b)||(b.fit||0)-(a.fit||0);
+  if(sortBy==="easy")return ease(a)-ease(b)||(b.fit||0)-(a.fit||0);
+  return (b.fit||0)-(a.fit||0);
+}
+
+let stageFilter=null;
+let showSkipped=false;
+function inTab(j){const s=j.status||"review";if(tab==="matches")return s==="review";if(tab==="archive")return ARCHIVE_STATES.includes(s);if(!(tab==="done"?DONE_STATES:APP_STATES).includes(s))return false;if(!stageFilter)return true;return stageFilter==="interview"?(s==="interview"||s==="offer"):s===stageFilter}
+let query="";let linkOnly=false;
+function terms(){return query.toLowerCase().split(/\s+/).filter(Boolean)}
+function hay(j){const t=j.tailor||{};return [j.title,j.company,j.location,j.salary,j.seen,j.notes,j.caution,j.url,...(j.why||[]),...(j.gaps||[]),...(t.skills||[])].filter(Boolean).join(" \n ").toLowerCase()}
+function matchesQ(j){if(linkOnly&&tab!=="matches"&&j.source!=="link")return false;const ts=terms();if(!ts.length)return true;const h=hay(j);return ts.every(x=>h.includes(x))}
+function hl(v){const s=esc(v);const ts=terms().map(x=>esc(x).replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));if(!ts.length)return s;const re=new RegExp("("+ts.join("|")+")","gi");return s.split(/(&[#a-z0-9]+;)/i).map((p,i)=>i%2?p:p.replace(re,"<mark>$1</mark>")).join("")}
+function tabOf(j){const s=j.status||"review";return s==="review"?"matches":ARCHIVE_STATES.includes(s)?"archive":DONE_STATES.includes(s)?"done":APP_STATES.includes(s)?"apps":null}
+function visible(){
+  const order={applying:0,approved:1,requested:1,interview:2,offer:2,applied:3,rejected:4};
+  if(tab==="archive")return jobs.filter(j=>inTab(j)&&matchesQ(j)).sort((a,b)=>String(endedAt(b)).localeCompare(String(endedAt(a)))||(b.fit||0)-(a.fit||0));
+  return jobs.filter(j=>inTab(j)&&matchesQ(j)).sort((a,b)=>(tab==="apps"||tab==="done")&&sortBy==="relevance"?(order[a.status]-order[b.status])||(b.fit-a.fit):cmp(a,b));
+}
+
+function sortSel(){return `<label class="sortl"><span class="lbl" style="display:inline;margin:0 6px 0 0">Sort</span><select id="sort-sel">${[["relevance","Relevance (best fit)"],["urgency","Urgency (closing soonest)"],["easy","Easy apply (no sign-in)"]].map(([k,l])=>`<option value="${k}" ${k===sortBy?"selected":""}>${l}</option>`).join("")}</select></label>`}
+function linkChip(){const n=jobs.filter(j=>j.source==="link"&&tabOf(j)===tab).length;if(!n&&!linkOnly)return "";return `<button type="button" class="btn small${linkOnly?" primary":""}" id="link-only" aria-pressed="${linkOnly}">🔗 Only my links (${n})${linkOnly?" ✕":""}</button>`}
+function renderToolbar(){
+  if(tab==="matches"){
+    const hi=jobs.filter(j=>(j.status||"review")==="review"&&j.fit>=80).length;
+    $("toolbar").innerHTML=`${sortSel()}${hi&&canWrite?`<button class="btn small" id="approve-hi">Approve all 80+ (${hi})</button>`:""}`;
+  } else if(tab==="archive"){
+    const ns=jobs.filter(j=>j.status==="skipped").length,nr=jobs.filter(j=>j.status==="rejected").length;
+    $("toolbar").innerHTML=`<span class="sub">${ns} skipped · ${nr} rejected. Newest first, with the reason.</span>${linkChip()}`;
+    return;
+  } else $("toolbar").innerHTML=`${sortSel()}${linkChip()}${stageFilter?`<button class="btn small" id="clear-stage">Showing: ${esc({approved:"Approved",applying:"Needs you",applied:"Applied",interview:"Interviews"}[stageFilter]||stageFilter)} ✕</button>`:`<span class="sub">Tap a box above to filter.</span>`}`;
+  const cs=$("clear-stage");if(cs)cs.onclick=()=>{stageFilter=null;renderAll()};
+  $("sort-sel").onchange=e=>{sortBy=e.target.value;try{localStorage.setItem("sortBy",sortBy)}catch(_){};renderList()};
+}
+
+function renderHint(){
+  const h=$("q-hint");$("q-clear").hidden=!query;
+  if(!terms().length){h.hidden=true;h.innerHTML="";return}
+  const n=visible().length;const names={matches:"Matches",apps:"In progress",done:"Applied",archive:"Skipped & rejected"};
+  const other={};jobs.forEach(j=>{const t=tabOf(j);if(t&&t!==tab&&matchesQ(j))other[t]=(other[t]||0)+1});
+  const btns=Object.keys(names).filter(k=>other[k]).map(k=>`<button type="button" data-tab="${k}">${names[k]} (${other[k]})</button>`).join("");
+  h.innerHTML=`<span>${n} result${n===1?"":"s"} here${stageFilter&&n?" (stage filter on)":""}${btns?" · also in":""}</span>${btns}`;h.hidden=false;
+}
+function renderList(){
+  renderHint();
+  const v=visible();
+  if(!jobs.length){$("list").innerHTML=`<div class="empty">No jobs yet. Tap <b>Find new jobs now</b>, or wait for the next 7:41 run (Mon, Wed, Fri).</div>`;return}
+  if(!v.length&&terms().length){$("list").innerHTML=`<div class="empty">No jobs here match “${esc(query.trim())}”. Try fewer words, or check the other tabs above.</div>`;return}
+  if(!v.length){$("list").innerHTML=`<div class="empty">${tab==="archive"?"Nothing skipped or rejected yet.":tab==="matches"?"You're all caught up. New matches arrive Mon, Wed and Fri mornings.":(tab==="done"?"Nothing here yet. When an application is sent, or you tap I've applied, it moves here.":"Nothing in progress. Approve a match to get started.")}</div>`;return}
+  $("list").innerHTML=v.map(j=>{const s=j.status||"review";return `<div class="job" tabindex="0" data-id="${esc(j.id)}" aria-current="${j.id===sel}">
+    <div class="jrow"><span class="score ${scoreClass(j.fit)}" title="Fit score">${j.fit}</span>
+    <div><h3>${hl(j.title)}</h3><div class="meta">${hl(j.company)} · ${hl(j.location)}</div><span class="pill s-${esc(s)}">${esc(SLABEL[s]||s)}</span>${j.source==="link"?` <span class="pill">🔗 Your link</span>`:""} <span class="pill ease${ease(j)}">${EASE_LABEL[ease(j)]}</span>${deadline(j)!==Infinity&&/clos/i.test(String(j.seen||"")+String(j.caution||""))?` <span class="pill">Closes ${esc(new Date(deadline(j)).toLocaleDateString("en-GB",{day:"numeric",month:"short"}))}</span>`:""}
+    ${s==="applying"&&j.needs?`<div class="needs">${esc(j.needs)}</div>`:""}${ARCHIVE_STATES.includes(s)?`<div class="needs">Reason: ${esc(reasonOf(j))}${endedAt(j)?` · ${esc(shortDate(endedAt(j)))}`:""}</div>`:""}</div></div>
+    ${s==="skipped"&&canWrite?`<div class="jbtns"><button class="btn small" data-act="review" data-id="${esc(j.id)}">Move back to matches</button></div>`:""}
+    ${s==="review"&&canWrite?`<div class="jbtns"><button class="btn small good" data-act="approved" data-id="${esc(j.id)}">Approve</button><button class="btn small ghost" data-act="skipped" data-id="${esc(j.id)}">Skip</button></div>`:""}
+    ${(s==="applying"||s==="approved")&&canWrite?`<div class="jbtns">${s==="applying"?`<button class="btn small" data-act="approved" data-id="${esc(j.id)}">I've signed in, try again</button>`:""}<button class="btn small good" data-act="applied" data-id="${esc(j.id)}">I've applied</button></div>`:""}
+  </div>`}).join("");
+}
+
+function renderDetail(){
+  const j=jobs.find(x=>x.id===sel);
+  if(!j){$("detail").innerHTML=`<p class="sub">Pick a job to see the fit and its tailored CV.</p>`;return}
+  const s=j.status||"review";
+  $("detail").innerHTML=`
+  <h2>${esc(j.title)}</h2>
+  <div class="facts"><span>${esc(j.company)}</span><span>${esc(j.location)}</span>${j.salary?`<span>${esc(j.salary)}</span>`:""}<span>${esc(j.seen||"")}</span><span>Fit ${j.fit}/100</span></div>
+  <div class="actions">
+    ${s==="review"&&canWrite?`<button class="btn good" data-act="approved" data-id="${esc(j.id)}">Approve for applying</button>`:""}
+    ${(s==="applying"||s==="approved"||s==="review")&&canWrite?`<button class="btn" data-act="applied" data-id="${esc(j.id)}">I've applied</button>`:""}
+    <a class="btn" href="${esc(j.url)}" target="_blank" rel="noopener">Open listing ↗</a>
+    <label for="status-sel" class="sr">Status</label>
+    <select id="status-sel" ${canWrite?"":"disabled"}>${STATUSES.map(([k,l])=>`<option value="${k}" ${k===s?"selected":""}>${esc(l)}</option>`).join("")}</select>
+    <span class="saved" id="saved"></span>
+  </div>
+  ${s==="applying"&&j.needs?`<div class="note"><b>Needs you:</b> ${esc(j.needs)}</div>`:""}
+  ${receiptHTML(j)}
+  ${ARCHIVE_STATES.includes(s)?`<div class="note"><b>${s==="rejected"?"Rejected":"Skipped"}${endedAt(j)?" "+esc(shortDate(endedAt(j))):""}:</b> ${esc(reasonOf(j))}</div>`:""}
+  ${j.caution&&!ARCHIVE_STATES.includes(s)?`<div class="note"><b>Check first:</b> ${esc(j.caution)}</div>`:""}
+  <div class="cols">
+    <div><span class="lbl">Why it fits</span><ul>${(j.why||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>
+    <div><span class="lbl">Gaps to address</span><ul>${(j.gaps||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>
+  </div>
+  <label class="lbl" for="notes">Your notes</label>
+  <textarea id="notes" placeholder="Contacts, interview dates, prep…" ${canWrite?"":"disabled"}>${esc(j.notes||"")}</textarea>
+  <div class="cvhead"><h4>${cvLabel(j)}</h4><div style="display:flex;gap:6px;flex-wrap:wrap">${downloads?`<button class="btn small" id="dl-cv">Download PDF</button>`:""}<button class="btn small" id="copy-cv">Copy text</button></div></div>
+  ${sample&&canWrite?`<details class="tailor" id="tl-box" ${j.tailor&&j.tailor.rewrite&&tlOpenId!==j.id?"":"open"}>
+    <summary><span>✨ Tailor this CV to the job</span><span class="meta">${j.tailor&&j.tailor.tailoredAt?`Tailored ${esc(shortDate(j.tailor.tailoredAt))}${j.tailor.tailoredWithJD?" from the job description":""}`:"Rewrites your profile, skills and bullets in the employer's language"}</span></summary>
+    <label class="lbl" for="tl-jd" style="margin-top:10px">Paste the job description (best results)</label>
+    <textarea id="tl-jd" placeholder="Open the listing, copy the whole job description and paste it here. Without it, Claude uses the role title and fit notes.">${esc(j.jd||"")}</textarea>
+    <div class="row"><button class="btn primary small" id="tl-go">${j.tailor&&j.tailor.rewrite?"Re-tailor CV":"Tailor CV"}</button>${j.tailorPrev?`<button class="btn small ghost" id="tl-undo">Undo last tailoring</button>`:""}<span class="saved" id="tl-status"></span></div>
+    <p class="meta" style="margin:8px 0 0">Only your real experience and numbers are used. Any line where the new wording changes a number is kept as it was.</p>
+  </details>`:""}
+  <div class="paperwrap"><div class="paper" id="cv">${cvHTML(j.tailor)}</div></div>
+  <div class="cvhead"><h4>Cover letter</h4><div style="display:flex;gap:6px;flex-wrap:wrap">${sample&&canWrite?`<button class="btn small primary" id="gen-cl">${hasCover(j)?"Rewrite cover letter":"Write cover letter"}</button>`:""}${hasCover(j)?`${downloads?`<button class="btn small" id="dl-cl">Download PDF</button>`:""}<button class="btn small" id="copy-cl">Copy text</button>`:""}</div></div>
+  <div class="saved" id="cl-status"></div>
+  <div id="cl-wrap">${hasCover(j)?`<div class="paperwrap"><div class="paper" id="cl">${coverHTML(j)}</div></div>`:`<div class="empty">${sample?"Tap <b>Write cover letter</b> to create one for this role.":"Open this app in Claude to write a cover letter."}</div>`}</div>
+  ${sample?`<div class="ask">
+    <label class="lbl" for="ask-q">Application question</label>
+    <textarea id="ask-q" placeholder="Paste a question from the application form, e.g. Why do you want to work here? (max 250 words)"></textarea>
+    <div class="row"><button class="btn primary small" id="ask-go">Get answer</button><button class="btn small ghost" id="ask-stop" hidden>Stop</button><span class="saved" id="ask-status"></span></div>
+    <div id="ask-out"></div>
+    ${(j.qa||[]).length?`<span class="lbl" style="margin-top:14px">Your answers for this role</span>${j.qa.map((x,i)=>`<div class="answer"><div class="q">${esc(x.q)}</div>${esc(x.a)}<div class="row"><button class="btn small" data-copyqa="${i}">Copy</button></div></div>`).join("")}`:""}
+  </div>`:""}`;
+  $("status-sel").onchange=e=>{if(e.target.value==="skipped"){e.target.value=s;openSkip(j.id)}else setStatus(j.id,e.target.value)};
+  let tm;$("notes").oninput=e=>{clearTimeout(tm);const v=e.target.value;tm=setTimeout(()=>save(j.id,{notes:v}),700)};
+  $("copy-cv").onclick=async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText(cvText(j.tailor));b.textContent="Copied"}catch(_){const r=document.createRange();r.selectNodeContents($("cv"));const g=getSelection();g.removeAllRanges();g.addRange(r);b.textContent="Selected, press Ctrl+C"}setTimeout(()=>b.textContent="Copy text",2200)};
+  const gc=$("gen-cl");if(gc)gc.onclick=()=>writeCover(j);
+  const tg=$("tl-go");if(tg)tg.onclick=()=>tailorCV(j);
+  const tu=$("tl-undo");if(tu)tu.onclick=()=>undoTailor(j);
+  const ag=$("ask-go");if(ag)ag.onclick=()=>askQuestion(j);
+  document.querySelectorAll("[data-copyqa]").forEach(b=>b.onclick=async()=>{try{await navigator.clipboard.writeText(j.qa[+b.dataset.copyqa].a);b.textContent="Copied"}catch(_){b.textContent="Copy failed"}setTimeout(()=>b.textContent="Copy",2000)});
+  const cc=$("copy-cl");if(cc)cc.onclick=async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText(j.cover.join("\n\n"));b.textContent="Copied"}catch(_){const r=document.createRange();r.selectNodeContents($("cl"));const g=getSelection();g.removeAllRanges();g.addRange(r);b.textContent="Selected, press Ctrl+C"}setTimeout(()=>b.textContent="Copy text",2200)};
+  const dc=$("dl-cl");if(dc)dc.onclick=async()=>{
+    if(!window.jspdf){dc.textContent="PDF unavailable";return}
+    const name=`${fileName()}_Cover_Letter_${(j.company||"").replace(/[^A-Za-z0-9]+/g,"_").slice(0,30)}.pdf`;
+    try{await downloads.save({filename:name,data:coverPDF(j)})}catch(e){if(e.code==="unavailable"||e.code==="not_granted"){dc.hidden=true}else if(e.code!=="declined"){dc.textContent="Try again"}}
+  };
+  const dl=$("dl-cv");if(dl)dl.onclick=async()=>{
+    if(!window.jspdf){dl.textContent="PDF unavailable";return}
+    const name=`${fileName()}_${isSup(j.tailor)?"Support_":""}CV_${(j.company||"").replace(/[^A-Za-z0-9]+/g,"_").slice(0,30)}.pdf`;
+    try{await downloads.save({filename:name,data:cvPDF(j.tailor)})}catch(e){if(e.code==="unavailable"||e.code==="not_granted"){dl.hidden=true}else if(e.code!=="declined"){dl.textContent="Try again"}}
+  };
+}
+
+async function save(id,patch){
+  const j=jobs.find(x=>x.id===id);if(j)Object.assign(j,patch);
+  const s=$("saved");
+  if(!db){banner("Changes can't be saved here. Open this app in Claude while signed in.","err");return false}
+  try{await db.doc("jobs/"+id).update(patch);if(s)s.textContent="Saved";return true}
+  catch(e){banner(e.code==="invalid_argument"?"You can view this tracker but not change it.":"Couldn't save that change. Check your connection and try again.","err");return false}
+}
+function setStatus(id,status){
+  const patch={status};if(status==="approved")patch.approvedAt=new Date().toISOString();
+  if(status==="rejected"){const j=jobs.find(x=>x.id===id);if(j&&!j.rejectedAt)patch.rejectedAt=new Date().toISOString()}
+  if(status==="applied"){const j=jobs.find(x=>x.id===id);if(j&&!j.appliedAt){const now=new Date();patch.appliedAt=now.toISOString().slice(0,10);if(!j.receipt)patch.receipt={submittedAt:now.toISOString(),site:"You applied yourself",cvFile:"Tailored CV from this app (if you uploaded it)",self:true}}}
+  save(id,patch);renderAll();
+}
+
+async function fire(text,btn,label){
+  if(!mcp)return;btn.disabled=true;const old=btn.textContent;btn.textContent="Starting…";
+  try{
+    await mcp.callTool("Claude Code Remote","fire_trigger",{trigger_id:TRIGGER_ID,text});
+    banner(`<span><b>${esc(label)}</b> started. Results appear here in a few minutes, and you'll get a notification.</span>`);
+  }catch(e){
+    const msg={needs_reauth:"Reconnect Claude Code Remote in claude.ai Settings → Connectors, then try again.",server_not_connected:"This needs the Claude Code Remote connector. Open this app in claude.ai, where it's built in.",not_in_manifest:"Starting runs from here isn't allowed for this view. You can still approve jobs, then tap Apply to approved now from claude.ai.",approval_required:"Allow this app to start your job search when Claude asks, then try again.",blocked_by_policy:"Your organisation doesn't allow starting runs from here. Approved jobs will be applied for at the next scheduled run."}[e.code]
+      ||"Couldn't start the run just now. Your approved jobs are kept; try again in a moment.";
+    banner(esc(msg),"err");
+  }finally{btn.textContent=old;btn.disabled=false;renderPipeline()}
+}
+
+async function exportXlsx(btn){
+  if(!window.XLSX){banner("Excel export couldn't load. Reload the page and try again.","err");return}
+  if(!downloads){banner("Downloads aren't available in this view. Open the app in Claude to export.","err");return}
+  const order=["applying","approved","requested","interview","offer","applied","review","rejected","skipped"];
+  const rows=[...jobs].sort((a,b)=>order.indexOf(a.status||"review")-order.indexOf(b.status||"review")||(b.fit||0)-(a.fit||0)).map(j=>{const r=j.receipt||{};return {
+    "Status":SLABEL[j.status||"review"]||j.status,
+    "Job title":j.title||"","Company":j.company||"","Location":j.location||"","Salary":j.salary||"",
+    "Fit score":j.fit||"","Posted":j.seen||"",
+    "Approved":shortDate(j.approvedAt),"Applied":shortDate(r.submittedAt||j.appliedAt),"Applied via":r.site||j.applyNote||"","Reference":r.reference||"",
+    "Skipped":shortDate(j.skippedAt),"Rejected":shortDate(j.rejectedAt),
+    "Reason / next step":ARCHIVE_STATES.includes(j.status)?reasonOf(j):(j.status==="applying"?(j.needs||""):""),
+    "Cover letter":hasCover(j)?"Yes":"","Notes":j.notes||"","Listing URL":j.url||"",
+    "Why it fits":(j.why||[]).join("; "),"Gaps":(j.gaps||[]).join("; ")}});
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws["!cols"]=[12,38,26,28,20,9,18,13,13,22,14,13,13,44,12,36,50,60,50].map(w=>({wch:w}));
+  if(ws["!ref"])ws["!autofilter"]={ref:ws["!ref"]};
+  const sum=STATUSES.map(([k,l])=>({"Status":l,"Jobs":jobs.filter(j=>(j.status||"review")===k).length}));
+  sum.push({"Status":"Total","Jobs":jobs.length});
+  const ws2=XLSX.utils.json_to_sheet(sum);ws2["!cols"]=[{wch:16},{wch:8}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"All jobs");XLSX.utils.book_append_sheet(wb,ws2,"Summary");
+  const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  const old=btn.textContent;
+  try{await downloads.save({filename:`${fileName()}_job_applications_${new Date().toISOString().slice(0,10)}.xlsx`,data:new Uint8Array(buf)});btn.textContent="Exported"}
+  catch(e){if(e.code==="rate_limited")banner("A download is already waiting for you to confirm.","err");else if(e.code!=="declined")banner("Couldn't export just now. Try again.","err")}
+  setTimeout(()=>btn.textContent=old,2000);
+}
+
+function renderProfile(){
+  const a=answers||{},d=a.diversity||{};
+  const set=(id,v)=>{const el=$(id);if(el&&document.activeElement!==el)el.value=v??""};
+  set("p-salary",a.salary);set("p-start",a.start);set("p-rtw",a.rightToWork);set("p-location",a.location);
+  set("p-gender",d.gender);set("p-eth",d.ethnicity);set("p-rel",d.religion);set("p-other",d.other);
+  set("p-cap",a.dailyCap??8);set("p-auto",a.autoApprove??"");
+  $("p-save").disabled=!canWrite;
+  const sc=$("sup-cv");if(sc&&!sc.innerHTML)sc.innerHTML=supHTML();
+  $("dl-sup").hidden=!downloads;
+}
+
+function renderLinks(){
+  const mine=jobs.filter(j=>j.source==="link").sort((a,b)=>String(b.requestedAt||"").localeCompare(String(a.requestedAt||"")));
+  $("add-go").disabled=!canWrite;
+  $("linklist").innerHTML=mine.length?`<span class="lbl">Links you've added</span>`+mine.map(j=>{const s=j.status||"requested";
+    const msg=s==="requested"?"Waiting for the next run to check it":s==="approved"?"Checked and tailored. Tap Apply to approved now to send it":s==="applying"?(j.needs||"Needs you"):s==="applied"?`Applied ${esc(j.appliedAt||"")}${j.applyNote?" · "+esc(j.applyNote):""}`:s==="skipped"?(j.skipReason||j.caution||"Skipped"):s==="rejected"?(j.caution||"Rejected"):"";
+    return `<div class="linkitem"><div><h3>${esc(j.title||"Job from your link")}${j.company?` · <span class="meta">${esc(j.company)}</span>`:""}</h3>
+    <div class="u">${esc(j.url)}</div><div class="meta">${esc(msg)}</div></div>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end"><span class="pill s-${esc(s)}">${esc(SLABEL[s]||s)}</span>${tabOf(j)?`<button type="button" class="btn small" data-goto="${esc(j.id)}">Open in ${esc({apps:"In progress",done:"Applied",archive:"Skipped",matches:"Matches"}[tabOf(j)])} →</button>`:""}</div></div>`}).join(""):`<div class="empty">No links added yet. Paste a job link above to apply to it.</div>`;
+  const n=jobs.filter(j=>j.status==="requested").length;
+  const ck=$("check-links");ck.hidden=!n||!mcp;ck.textContent=`Check my links now (${n})`;
+  $("tab-add").innerHTML=`Apply by link${n?`<span class="n">${n}</span>`:""}`;
+}
+
+$("add-form").addEventListener("submit",async e=>{
+  e.preventDefault();const st=$("add-status"),inp=$("add-url");let u;
+  try{u=new URL(inp.value.trim());if(!/^https?:$/.test(u.protocol))throw 0}catch(_){st.textContent="Paste a full link starting with https://";inp.focus();return}
+  const url=u.href;
+  if(jobs.some(j=>j.url===url&&!["skipped","rejected"].includes(j.status))){st.textContent="That job is already in your list.";return}
+  if(!db){st.textContent="Sign in to Claude to add links";return}
+  const id="link-"+Date.now().toString(36);
+  const host=u.hostname.replace(/^www\./,"");
+  $("add-go").disabled=true;st.textContent="Adding…";
+  try{
+    await db.doc("jobs/"+id).set({url,status:"requested",source:"link",requestedAt:new Date().toISOString(),approvedAt:new Date().toISOString(),
+      title:"Job from your link",company:host,location:"",fit:0,why:[],gaps:[],notes:$("add-note").value.trim(),seen:"Added by you",cvType:$("add-cvtype").value,...($("add-cvtype").value==="support"?{tailor:{type:"support"}}:{})});
+    inp.value="";$("add-note").value="";$("add-cvtype").value="cyber";st.textContent="Added.";
+    banner("<span>Link saved. Add as many as you like, then tap <b>Check my links now</b> once (one run for all of them), or wait for the next scheduled run.</span>");
+  }catch(_){st.textContent="Couldn't save that link. Try again."}
+  finally{$("add-go").disabled=!canWrite}
+});
+
+function renderAll(){
+  document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===tab));
+  $("view-jobs").hidden=tab==="profile"||tab==="add";$("view-profile").hidden=tab!=="profile";$("view-add").hidden=tab!=="add";
+  renderPipeline();
+  if(tab==="profile"){renderProfile();return}
+  if(tab==="add"){renderLinks();return}
+  const v=visible();if(!v.find(j=>j.id===sel))sel=v[0]?.id||null;
+  renderToolbar();renderList();
+  const editing=document.activeElement&&["notes","ask-q","tl-jd"].includes(document.activeElement.id)||($("tl-go")?.disabled)||(clCtl&&!clCtl.signal.aborted&&$("gen-cl")?.disabled)||($("ask-go")?.disabled);
+  if(!editing)renderDetail();
+}
+
+document.addEventListener("click",e=>{
+  const sg=e.target.closest("[data-stage]");if(sg){const k=sg.dataset.stage;if(k==="review"){tab="matches";stageFilter=null}else{const t2=(k==="applied"||k==="interview")?"done":"apps";stageFilter=(stageFilter===k&&tab===t2)?null:k;tab=t2}sel=null;renderAll();return}
+  if(e.target.closest("#link-only")){linkOnly=!linkOnly;sel=null;renderAll();return}
+  const lk=e.target.closest("[data-goto]");if(lk){const j=jobs.find(x=>x.id===lk.dataset.goto);const t3=j&&tabOf(j);if(t3){tab=t3;stageFilter=null;linkOnly=true;query="";$("q").value="";sel=j.id;try{localStorage.setItem("tab",tab)}catch(_){};renderAll();$("detail").scrollIntoView({behavior:"smooth",block:"start"})}return}
+  const t=e.target.closest("[data-tab]");if(t){stageFilter=null;tab=t.dataset.tab;try{localStorage.setItem("tab",tab)}catch(_){};renderAll();return}
+  const a=e.target.closest("[data-act]");if(a){e.stopPropagation();if(a.dataset.act==="skipped"){openSkip(a.dataset.id);return}setStatus(a.dataset.id,a.dataset.act);return}
+  if(e.target.closest("#approve-hi")){jobs.filter(j=>(j.status||"review")==="review"&&j.fit>=80).forEach(j=>setStatus(j.id,"approved"));return}
+  if(e.target.closest("#export-xlsx")){exportXlsx($("export-xlsx"));return}
+  if(e.target.closest("#run-search")){fire("Run now on request from the app: search for new matching jobs and add them. Do NOT apply to anything this run.",$("run-search"),"Job search");return}
+  if(e.target.closest("#check-links")){fire("Run now on request from the app: process jobs with status requested (links added): check each is open, fill in the details and tailor the CV (jobs with cvType support use the second CV, tailor.type support). Do NOT apply to anything this run, and skip the new job search.",$("check-links"),"Checking your links");return}
+  if(e.target.closest("#run-apply")){fire("Run now on request from the app: apply to all jobs with status approved. Skip the new job search this time.",$("run-apply"),"Applying");return}
+  const j=e.target.closest(".job");if(j){sel=j.dataset.id;try{localStorage.setItem("sel",sel)}catch(_){};renderList();renderDetail();if(innerWidth<880)$("detail").scrollIntoView({behavior:"smooth"})}
+});
+$("q").value=query;
+function onQuery(){query=$("q").value;
+  const v=visible();const prev=sel;if(!v.find(j=>j.id===sel))sel=v[0]?.id||null;renderList();if(sel!==prev)renderDetail()}
+$("q").addEventListener("input",onQuery);
+$("q").addEventListener("keydown",e=>{if(e.key==="Escape"&&$("q").value){e.preventDefault();$("q").value="";onQuery()}});
+$("q-clear").addEventListener("click",()=>{$("q").value="";onQuery();$("q").focus()});
+document.addEventListener("keydown",e=>{if(e.key==="/"&&!e.ctrlKey&&!e.metaKey&&!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName||"")&&!document.activeElement?.isContentEditable&&!$("view-jobs").hidden){e.preventDefault();$("q").focus()}});
+document.addEventListener("keydown",e=>{const j=e.target.closest&&e.target.closest(".job");if(j&&(e.key==="Enter"||e.key===" ")&&e.target===j){e.preventDefault();j.click()}});
+
+$("profile-form").addEventListener("submit",async e=>{
+  e.preventDefault();const st=$("p-status");
+  if(!db){st.textContent="Sign in to save";return}
+  const num=(v,d)=>{const n=parseInt(v,10);return Number.isFinite(n)?n:d};
+  const data={salary:$("p-salary").value.trim(),start:$("p-start").value.trim(),rightToWork:$("p-rtw").value.trim(),location:$("p-location").value.trim(),
+    diversity:{gender:$("p-gender").value.trim(),ethnicity:$("p-eth").value.trim(),religion:$("p-rel").value.trim(),other:$("p-other").value.trim()},
+    dailyCap:Math.min(Math.max(num($("p-cap").value,8),1),15),autoApprove:$("p-auto").value.trim()?num($("p-auto").value,null):null,
+    rules:(answers&&answers.rules)||"Apply on employer careers sites, not LinkedIn/Indeed bots. Never apply twice to the same job. Never invent experience."};
+  try{await db.doc("settings/answers").set(data);st.textContent="Saved"}catch(_){st.textContent="Couldn't save, try again"}
+});
+
+initExtras();
+$("copy-sup").onclick=async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText(supText());b.textContent="Copied"}catch(_){b.textContent="Copy failed"}setTimeout(()=>b.textContent="Copy text",2200)};
+$("dl-sup").onclick=async e=>{const b=e.currentTarget;if(!window.jspdf||!downloads){b.textContent="PDF unavailable";return}
+  try{await downloads.save({filename:`${fileName()}_CV_Customer_Support.pdf`,data:supPDF()})}catch(err){if(err.code==="unavailable"||err.code==="not_granted"){b.hidden=true}else if(err.code!=="declined"){b.textContent="Try again"}}};
+document.title=PROFILE.appTitle;$("app-title").textContent=PROFILE.appTitle;$("opt-main").textContent=PROFILE.mainCvLabel;$("opt-alt").textContent=PROFILE.altCvLabel;
+renderAll();
+(async()=>{
+  const c=window.claude;
+  [db,mcp,downloads,sample]=await Promise.all([c?.use?.("db"),c?.use?.("mcp"),c?.use?.("downloads"),c?.use?.("sample")].map(p=>Promise.resolve(p).catch(()=>null)));
+  const user=await Promise.resolve(c?.use?.("user")).catch(()=>null);
+  if(user){const w=await Promise.resolve(user.can?.("data.write")).catch(()=>null);if(w===false)canWrite=false}
+  if(!db){$("list").innerHTML=`<div class="empty">Open this app in Claude while signed in to load your jobs.</div>`;renderPipeline();return}
+  db.collection("jobs").onSnapshot(snap=>{jobs=snap.docs.map(d=>({id:d.id,...structuredClone(d.data())}));renderAll()},
+    ()=>{$("list").innerHTML=`<div class="empty">Couldn't load your jobs. Reload the page to try again.</div>`});
+  db.doc("settings/answers").onSnapshot(s=>{answers=s.exists?structuredClone(s.data()):null;if(tab==="profile")renderProfile()},()=>{});
+  db.doc("settings/run").onSnapshot(s=>{lastRun=s.exists?s.data():null;renderPipeline()},()=>{});
+})();
+</script>
+
+
+</body></html>

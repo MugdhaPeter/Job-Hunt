@@ -1,0 +1,6 @@
+# Keep personal data out of the repo
+*.json
+*.pdf
+*.xlsx
+my-*.html
+.DS_Store
